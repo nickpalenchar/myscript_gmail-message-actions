@@ -61,7 +61,6 @@ def main():
         for msg in messages:
             data = service.users().messages().get(userId='me', id=msg['id']).execute()
             if BILL_REQUESTED_LABEL in data['labelIds']:
-                print('requested')
                 continue
             
             content = base64.urlsafe_b64decode(data['payload']['body']['data']).decode('utf-8')
@@ -87,14 +86,19 @@ def main():
                 'audience': 'private',
                 'recipients': 'palencharizard',
                 'amount': request_amount,
-                'note': f'con ed {bill_date}',
+                'note': f'Nat Grid {bill_date}',
             }
 
             link = urlunparse(('https', 'venmo.com', '/', '', urlencode(query_params), ''))
             print(link)
-            email = make_email(link)
+            email = make_email(link, request_amount)
             sent_message = service.users().messages().send(userId='me', body={'raw': email}).execute()
+
             print(sent_message)
+            # add bill-requested label
+            labels = {'removeLabelIds': [], 'addLabelIds': [BILL_REQUESTED_LABEL] }
+            service.users().messages().modify(userId='me', id=data['id'], body=labels).execute()
+
             return
 
 
@@ -103,7 +107,7 @@ def main():
         log.error(f'An error occurred: {error}')
 
 
-def make_email(pay_link, recipient=None):
+def make_email(pay_link, request_amount, recipient=None):
     with open('./secrets/email.json', 'r') as fh:
         email_values = json.loads(fh.read())
     if recipient:
@@ -111,7 +115,7 @@ def make_email(pay_link, recipient=None):
     
     message = MIMEMultipart()
     message['to'] = email_values['to']
-    message['subject'] = email_values['subject']
+    message['subject'] = email_values['subject'].replace('{amount}', request_amount)
     body = MIMEText(email_values['body'].replace('{link}', pay_link))
     message.attach(body)
     raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode('utf-8')

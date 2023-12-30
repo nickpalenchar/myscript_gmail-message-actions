@@ -3,6 +3,9 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 name = "pypi"
 
+[scripts]
+start = "python quickstart.py"
+
 [packages]
 cachetools = "==5.3.1"
 certifi = "==2023.5.7"
